@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 
 /* ===== ICON COMPONENTS ===== */
 const PlaceholderIcon = () => (
@@ -465,8 +465,6 @@ function Footer() {
 
 /* ===== MAIN APP ===== */
 function App() {
-  const revealRefs = useRef<HTMLElement[]>([])
-
   useEffect(() => {
     const observer = new IntersectionObserver(
       entries => {
