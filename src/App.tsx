@@ -1,26 +1,241 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 
-/* ===== ICON COMPONENTS ===== */
-const PlaceholderIcon = () => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-    <rect x="3" y="3" width="18" height="18" rx="2"/>
-    <path d="M3 16l5-5 4 4 4-6 5 7"/>
-    <circle cx="8.5" cy="8.5" r="1.5"/>
-  </svg>
-)
+/* ===== MEMBERS DATA ===== */
+interface Member {
+  id: number
+  name: string
+  class: string
+  designation: string
+  tier: 'leadership' | 'core' | 'executive'
+  photo?: string
+}
+
+const membersData: Member[] = [
+  { id: 1, name: 'Nikkitha Rosini Amshavel', class: '23CS7B', designation: 'President', tier: 'leadership', photo: '/members/nikkitha.png' },
+  { id: 2, name: 'Dharshini U', class: '23CS7A', designation: 'Vice President', tier: 'leadership', photo: '/members/dharshini.png' },
+  { id: 3, name: 'Jancy O', class: '23CS7A', designation: 'Secretary', tier: 'leadership', photo: '/members/jancy.png' },
+  { id: 4, name: 'Sharmila P', class: '23CS7B', designation: 'Tech Lead', tier: 'leadership', photo: '/members/sharmila.png' },
+  { id: 5, name: 'Hariharasudhan R', class: '24CS5A', designation: 'Club Admin', tier: 'core', photo: '/members/hari.png' },
+  { id: 6, name: 'Swathi S', class: '24CS5C', designation: 'Associate Admin', tier: 'core', photo: '/members/swathi.png' },
+  { id: 7, name: 'Kaarthika M', class: '24CS5B', designation: 'Joint Tech Lead', tier: 'core', photo: '/members/kaarthika.png' },
+  { id: 8, name: 'Gokula Prasath R', class: '24CS5A', designation: 'Organizer', tier: 'core', photo: '/members/gokul.png' },
+  { id: 9, name: 'Jeishree V', class: '24CS5A', designation: 'Content Creator', tier: 'core', photo: '/members/jeishree.png' },
+  { id: 10, name: 'Sowmiya M', class: '24CS5C', designation: 'Designer', tier: 'core', photo: '/members/sowmiya.png' },
+  { id: 12, name: 'Subasri S', class: '24CS5C', designation: 'Chief Innovator', tier: 'core', photo: '/members/subasri.png' },
+  { id: 13, name: 'Vikash K', class: '24CS5C', designation: 'Joint Treasurer', tier: 'core', photo: '/members/vikash.png' },
+  { id: 14, name: 'Sujith Ragav M', class: '24CS5C', designation: 'Tech Mentor', tier: 'core', photo: '/members/sujith.png' },
+  { id: 15, name: 'Kousalya K', class: '24CS5B', designation: 'Tech Scout', tier: 'core', photo: '/members/kousalya.png' },
+  { id: 16, name: 'Indhumathi S', class: '25CS3A', designation: 'Executive Member', tier: 'executive', photo: '/members/indhu.png' },
+  { id: 17, name: 'Abisek S U', class: '25CS3A', designation: 'Executive Member', tier: 'executive', photo: '/members/abi.png' },
+  { id: 18, name: 'Kaniga Sree K S', class: '25CS3B', designation: 'Executive Member', tier: 'executive', photo: '/members/kaniga.png' },
+  { id: 19, name: 'Prartthana P', class: '25CS3B', designation: 'Executive Member', tier: 'executive', photo: '/members/prartthana.png' },
+  { id: 20, name: 'Miruthulaa P', class: '25CS3B', designation: 'Executive Member', tier: 'executive', photo: '/members/miruthulaa.png' },
+  { id: 21, name: 'Sandhiya C', class: '25CS3C', designation: 'Executive Member', tier: 'executive', photo: '/members/sandhiya.png' },
+  { id: 22, name: 'Yohidha V S', class: '25CS3C', designation: 'Executive Member', tier: 'executive', photo: '/members/yohidha.png' },
+  { id: 23, name: 'Sabari K', class: '25CS3C', designation: 'Executive Member', tier: 'executive', photo: '/members/sabari.png' },
+  { id: 24, name: 'Rizvan R', class: '25CS3C', designation: 'Executive Member', tier: 'executive', photo: '/members/rizvan.png' },
+]
+
+/* ===== EVENTS DATA ===== */
+const eventsData = [
+  {
+    title: 'Tech Innovation Summit 2025',
+    desc: 'An exciting event filled with insightful sessions, workshops and networking opportunities.',
+    date: '24 May 2025',
+    time: '10:00 AM',
+    venue: 'Seminar Hall',
+  },
+  {
+    title: 'Web Development Bootcamp',
+    desc: 'A hands-on bootcamp covering modern web technologies from React to Node.js.',
+    date: '15 Jun 2025',
+    time: '9:00 AM',
+    venue: 'Lab 3',
+  },
+  {
+    title: 'AI/ML Workshop Series',
+    desc: 'Dive deep into machine learning fundamentals with practical projects and mentorship.',
+    date: '10 Jul 2025',
+    time: '2:00 PM',
+    venue: 'Auditorium',
+  },
+]
+
+const blogPosts = [
+  { tag: 'AI / ML', title: 'The Future of AI: Trends to Watch', desc: 'Explore the emerging trends and innovations shaping the future of artificial intelligence.' },
+  { tag: 'WEB DEV', title: 'Building Responsive Websites in 2025', desc: 'A complete guide to modern techniques for building fast and responsive websites.' },
+  { tag: 'TECH INSIGHTS', title: 'Cloud Computing Explained', desc: 'Understand the basics, benefits and future of cloud computing in simple terms.' },
+]
+
+/* ===== SVG ICONS ===== */
+const Icons = {
+  Sparkles: () => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 2l2.4 5.6L20 10l-5.6 2.4L12 18l-2.4-5.6L4 10l5.6-2.4z" />
+      <path d="M18 16l1.2 2.8L22 20l-2.8 1.2L18 24l-1.2-2.8L14 20l2.8-1.2z" />
+    </svg>
+  ),
+  Calendar: () => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+      <line x1="16" y1="2" x2="16" y2="6" />
+      <line x1="8" y1="2" x2="8" y2="6" />
+      <line x1="3" y1="10" x2="21" y2="10" />
+    </svg>
+  ),
+  Clock: () => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="10" />
+      <polyline points="12 6 12 12 16 14" />
+    </svg>
+  ),
+  MapPin: () => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+      <circle cx="12" cy="10" r="3" />
+    </svg>
+  ),
+  Collaborate: () => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+      <circle cx="9" cy="7" r="4" />
+      <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+      <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+    </svg>
+  ),
+  Innovate: () => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M9 18h6" />
+      <path d="M10 22h4" />
+      <path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14" />
+    </svg>
+  ),
+  Inspire: () => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+    </svg>
+  ),
+  Lead: () => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="10" />
+      <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76" />
+    </svg>
+  ),
+  Workshops: () => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="2" y="3" width="20" height="14" rx="2" ry="2" />
+      <line x1="8" y1="21" x2="16" y2="21" />
+      <line x1="12" y1="17" x2="12" y2="21" />
+    </svg>
+  ),
+  Hackathons: () => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="16 18 22 12 16 6" />
+      <polyline points="8 6 2 12 8 18" />
+    </svg>
+  ),
+  Seminars: () => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
+      <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+      <line x1="12" y1="19" x2="12" y2="23" />
+      <line x1="8" y1="23" x2="16" y2="23" />
+    </svg>
+  ),
+  TechMeets: () => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
+    </svg>
+  ),
+  Message: () => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+    </svg>
+  ),
+}
+
+/* ===== PARTICLE CANVAS ===== */
+function ParticleCanvas() {
+  const canvasRef = useRef<HTMLCanvasElement>(null)
+
+  useEffect(() => {
+    const canvas = canvasRef.current
+    if (!canvas) return
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
+
+    let animationId: number
+    const particles: { x: number; y: number; vx: number; vy: number; size: number; opacity: number }[] = []
+
+    const resize = () => {
+      canvas.width = window.innerWidth
+      canvas.height = window.innerHeight
+    }
+    resize()
+    window.addEventListener('resize', resize)
+
+    for (let i = 0; i < 50; i++) {
+      particles.push({
+        x: Math.random() * canvas.width,
+        y: Math.random() * canvas.height,
+        vx: (Math.random() - 0.5) * 0.4,
+        vy: (Math.random() - 0.5) * 0.4,
+        size: Math.random() * 2 + 0.5,
+        opacity: Math.random() * 0.4 + 0.1,
+      })
+    }
+
+    const animate = () => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height)
+      particles.forEach((p, i) => {
+        p.x += p.vx
+        p.y += p.vy
+        if (p.x < 0 || p.x > canvas.width) p.vx *= -1
+        if (p.y < 0 || p.y > canvas.height) p.vy *= -1
+
+        ctx.beginPath()
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2)
+        ctx.fillStyle = `rgba(0, 212, 255, ${p.opacity})`
+        ctx.fill()
+
+        for (let j = i + 1; j < particles.length; j++) {
+          const dx = p.x - particles[j].x
+          const dy = p.y - particles[j].y
+          const dist = Math.sqrt(dx * dx + dy * dy)
+          if (dist < 130) {
+            ctx.beginPath()
+            ctx.moveTo(p.x, p.y)
+            ctx.lineTo(particles[j].x, particles[j].y)
+            ctx.strokeStyle = `rgba(0, 212, 255, ${0.07 * (1 - dist / 130)})`
+            ctx.lineWidth = 0.5
+            ctx.stroke()
+          }
+        }
+      })
+      animationId = requestAnimationFrame(animate)
+    }
+    animate()
+
+    return () => {
+      cancelAnimationFrame(animationId)
+      window.removeEventListener('resize', resize)
+    }
+  }, [])
+
+  return <canvas ref={canvasRef} className="particle-canvas" />
+}
 
 /* ===== NAVBAR ===== */
 function Navbar() {
   const [scrolled, setScrolled] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
-  const [activeSection, setActiveSection] = useState('motto')
+  const [activeSection, setActiveSection] = useState('hero')
 
   useEffect(() => {
     const handleScroll = () => {
       setScrolled(window.scrollY > 20)
-
-      const sections = ['motto', 'upcoming-event', 'tech-blog', 'about', 'members', 'events', 'feedback']
-      for (const id of sections.reverse()) {
+      const sections = ['hero', 'motto', 'upcoming-event', 'tech-blog', 'about', 'members', 'events', 'feedback']
+      for (const id of [...sections].reverse()) {
         const el = document.getElementById(id)
         if (el && el.getBoundingClientRect().top <= 150) {
           setActiveSection(id)
@@ -34,12 +249,12 @@ function Navbar() {
 
   const navItems = [
     { id: 'motto', label: 'Motto' },
-    { id: 'upcoming-event', label: 'Upcoming Event' },
-    { id: 'tech-blog', label: 'Tech Blog' },
-    { id: 'about', label: 'About Us' },
-    { id: 'members', label: 'Members' },
-    { id: 'events', label: 'Events' },
-    { id: 'feedback', label: 'Feedback' },
+    { id: 'upcoming-event', label: 'Events' },
+    { id: 'tech-blog', label: 'Blog' },
+    { id: 'about', label: 'About' },
+    { id: 'members', label: 'Team' },
+    { id: 'events', label: 'Activities' },
+    { id: 'feedback', label: 'Contact' },
   ]
 
   return (
@@ -75,27 +290,66 @@ function Navbar() {
   )
 }
 
-/* ===== HERO ===== */
+/* ===== HERO WITH BANNER ===== */
 function Hero() {
+  const [loaded, setLoaded] = useState(false)
+
+  useEffect(() => {
+    setTimeout(() => setLoaded(true), 100)
+  }, [])
+
   return (
-    <section className="hero" id="hero">
-      <div className="hero-bg-pattern" />
-      <div className="container hero-grid">
-        <div className="hero-content">
-          <p className="hero-sub">WELCOME TO</p>
-          <h1 className="hero-title">TECH CREW</h1>
-          <p className="hero-tagline">Innovate &nbsp;·&nbsp; Learn &nbsp;·&nbsp; Build &nbsp;·&nbsp; Grow</p>
-          <div className="hero-buttons">
-            <a href="#feedback" className="btn btn-primary">Join Us <span className="arrow">→</span></a>
-            <a href="#events" className="btn btn-outline">Explore Events <span className="arrow">→</span></a>
+    <section className={`hero${loaded ? ' hero-loaded' : ''}`} id="hero">
+      <div className="hero-image-bg">
+        <img src="/hero.jpg" alt="Tech Crew Banner" />
+        <div className="hero-overlay" />
+      </div>
+      <ParticleCanvas />
+      <div className="container hero-content-wrap">
+        <div className="hero-badge">
+          <Icons.Sparkles />
+          <span>Department of Computer Science</span>
+        </div>
+        <h1 className="hero-title">
+          <span className="hero-title-line">TECH</span>
+          <span className="hero-title-line gradient-text">CREW</span>
+        </h1>
+        <p className="hero-tagline">Innovate &nbsp;·&nbsp; Learn &nbsp;·&nbsp; Build &nbsp;·&nbsp; Grow</p>
+        <p className="hero-desc">
+          A student-driven technical club empowering minds through technology, innovation, and real-world problem solving.
+        </p>
+        <div className="hero-buttons">
+          <a href="#feedback" className="btn btn-glow">
+            <span>Join the Crew</span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M5 12h14m-7-7l7 7-7 7" /></svg>
+          </a>
+          <a href="#events" className="btn btn-glass">
+            <span>Explore Events</span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M5 12h14m-7-7l7 7-7 7" /></svg>
+          </a>
+        </div>
+        <div className="hero-stats">
+          <div className="stat">
+            <span className="stat-num">25+</span>
+            <span className="stat-label">Members</span>
+          </div>
+          <div className="stat-divider" />
+          <div className="stat">
+            <span className="stat-num">10+</span>
+            <span className="stat-label">Events</span>
+          </div>
+          <div className="stat-divider" />
+          <div className="stat">
+            <span className="stat-num">3+</span>
+            <span className="stat-label">Years</span>
           </div>
         </div>
-        <div className="hero-visual">
-          <div className="placeholder-box hero-placeholder">
-            <PlaceholderIcon />
-            <span>Hero Illustration</span>
-          </div>
+      </div>
+      <div className="scroll-indicator">
+        <div className="mouse">
+          <div className="wheel" />
         </div>
+        <span>Scroll Down</span>
       </div>
     </section>
   )
@@ -106,21 +360,18 @@ function Motto() {
   return (
     <section className="motto reveal" id="motto">
       <div className="container">
-        <h2 className="section-label">OUR MOTTO</h2>
+        <div className="section-header">
+          <span className="section-tag">OUR MOTTO</span>
+          <h2 className="section-title">What Drives Us Forward</h2>
+        </div>
         <div className="motto-content">
-          <div className="motto-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-              <path d="M9 21h6m-3-3v3m-4-9a4 4 0 118 0c0 1.5-.8 2.5-2 3.5-.4.3-.7.7-.9 1.1a.5.5 0 01-.45.4h-1.3a.5.5 0 01-.45-.4c-.2-.4-.5-.8-.9-1.1C10.8 14.5 10 13.5 10 12z"/>
-            </svg>
-          </div>
-          <div className="motto-text">
+          <div className="motto-card">
+            <div className="motto-glow" />
+            <div className="motto-icon-wrap">
+              <Icons.Sparkles />
+            </div>
             <h3>Learn. Build. Innovate. Lead the Future.</h3>
             <p>Empowering Ideas. Creating Impact.</p>
-          </div>
-          <div className="motto-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-              <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
-            </svg>
           </div>
         </div>
       </div>
@@ -129,70 +380,55 @@ function Motto() {
 }
 
 /* ===== UPCOMING EVENT ===== */
-const eventsData = [
-  {
-    title: 'Tech Innovation Summit 2025',
-    desc: 'An exciting event filled with insightful sessions, workshops and networking opportunities.',
-    date: '📅 24 May 2025',
-    time: '🕙 10:00 AM',
-    venue: '📍 Seminar Hall',
-  },
-  {
-    title: 'Web Development Bootcamp',
-    desc: 'A hands-on bootcamp covering modern web technologies from React to Node.js.',
-    date: '📅 15 Jun 2025',
-    time: '🕙 9:00 AM',
-    venue: '📍 Lab 3',
-  },
-  {
-    title: 'AI/ML Workshop Series',
-    desc: 'Dive deep into machine learning fundamentals with practical projects and mentorship.',
-    date: '📅 10 Jul 2025',
-    time: '🕙 2:00 PM',
-    venue: '📍 Auditorium',
-  },
-]
-
 function UpcomingEvent() {
   const [current, setCurrent] = useState(0)
-
   const next = () => setCurrent((current + 1) % eventsData.length)
   const prev = () => setCurrent((current - 1 + eventsData.length) % eventsData.length)
-
   const event = eventsData[current]
 
   return (
     <section className="upcoming-event reveal" id="upcoming-event">
       <div className="container">
-        <h2 className="section-label">UPCOMING EVENT</h2>
+        <div className="section-header">
+          <span className="section-tag">UPCOMING EVENT</span>
+          <h2 className="section-title">Don't Miss Out</h2>
+        </div>
         <div className="event-carousel">
-          <div className="event-card-main">
-            <div className="placeholder-box event-img-placeholder">
-              <PlaceholderIcon />
-            </div>
-            <div className="event-card-info">
-              <h3>{event.title}</h3>
-              <p>{event.desc}</p>
-              <div className="event-meta">
+          <div className="event-card-glass">
+            <div className="event-card-glow" />
+            <div className="event-badge">Featured Event</div>
+            <h3>{event.title}</h3>
+            <p className="event-desc">{event.desc}</p>
+            <div className="event-meta-grid">
+              <div className="meta-item">
+                <Icons.Calendar />
                 <span>{event.date}</span>
+              </div>
+              <div className="meta-item">
+                <Icons.Clock />
                 <span>{event.time}</span>
+              </div>
+              <div className="meta-item">
+                <Icons.MapPin />
                 <span>{event.venue}</span>
               </div>
-              <a href="#" className="btn btn-primary btn-sm">Know More</a>
+            </div>
+            <div className="event-actions">
+              <a href="#" className="btn btn-glow btn-sm">Register Now</a>
             </div>
             <div className="event-nav">
-              <button className="carousel-arrow" onClick={prev} aria-label="Previous">‹</button>
-              <button className="carousel-arrow" onClick={next} aria-label="Next">›</button>
+              <button className="carousel-arrow" onClick={prev} aria-label="Previous">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M15 18l-6-6 6-6" /></svg>
+              </button>
+              <div className="carousel-dots">
+                {eventsData.map((_, i) => (
+                  <span key={i} className={`dot${i === current ? ' active' : ''}`} onClick={() => setCurrent(i)} />
+                ))}
+              </div>
+              <button className="carousel-arrow" onClick={next} aria-label="Next">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 18l6-6-6-6" /></svg>
+              </button>
             </div>
-          </div>
-          <div className="carousel-dots">
-            {eventsData.map((_, i) => (
-              <span
-                key={i}
-                className={`dot${i === current ? ' active' : ''}`}
-                onClick={() => setCurrent(i)}
-              />
-            ))}
           </div>
         </div>
       </div>
@@ -201,34 +437,29 @@ function UpcomingEvent() {
 }
 
 /* ===== TECH BLOG ===== */
-const blogPosts = [
-  { tag: 'AI / ML', title: 'The Future of AI: Trends to Watch', desc: 'Explore the emerging trends and innovations shaping the future of artificial intelligence.' },
-  { tag: 'WEB DEV', title: 'Building Responsive Websites in 2025', desc: 'A complete guide to modern techniques for building fast and responsive websites.' },
-  { tag: 'TECH INSIGHTS', title: 'Cloud Computing Explained', desc: 'Understand the basics, benefits and future of cloud computing in simple terms.' },
-]
-
 function TechBlog() {
   return (
     <section className="tech-blog reveal" id="tech-blog">
       <div className="container">
-        <h2 className="section-label">TECH BLOG</h2>
+        <div className="section-header">
+          <span className="section-tag">TECH BLOG</span>
+          <h2 className="section-title">Latest Insights</h2>
+        </div>
         <div className="blog-grid">
           {blogPosts.map((post, i) => (
-            <article className="blog-card" key={i}>
-              <div className="placeholder-box blog-img-placeholder">
-                <PlaceholderIcon />
-              </div>
-              <div className="blog-body">
+            <article className="blog-card-glass" key={i}>
+              <div className="blog-card-top">
                 <span className="blog-tag">{post.tag}</span>
-                <h4>{post.title}</h4>
-                <p>{post.desc}</p>
-                <a href="#" className="read-more">Read More →</a>
+                <span className="blog-num">0{i + 1}</span>
               </div>
+              <h4>{post.title}</h4>
+              <p>{post.desc}</p>
+              <a href="#" className="read-more">
+                Read More
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M5 12h14m-7-7l7 7-7 7" /></svg>
+              </a>
             </article>
           ))}
-        </div>
-        <div className="center">
-          <a href="#" className="btn btn-outline">View All Blogs →</a>
         </div>
       </div>
     </section>
@@ -237,50 +468,42 @@ function TechBlog() {
 
 /* ===== ABOUT US ===== */
 function About() {
+  const pillars = [
+    { icon: Icons.Collaborate, title: 'Collaborate', desc: 'Work together to achieve extraordinary results.' },
+    { icon: Icons.Innovate, title: 'Innovate', desc: 'Turn bold ideas into impactful solutions.' },
+    { icon: Icons.Inspire, title: 'Inspire', desc: 'Inspire and grow together as one community.' },
+    { icon: Icons.Lead, title: 'Lead', desc: 'Lead the future with technology and vision.' },
+  ]
+
   return (
     <section className="about reveal" id="about">
-      <div className="container about-grid">
-        <div className="about-text">
-          <h2 className="section-label left">ABOUT US</h2>
-          <p>
-            Tech Crew is a student-driven technical club focused on learning, innovation and real-world skills.
-            We create opportunities to explore technology, share knowledge and build solutions together.
-          </p>
-          <div className="about-pillars">
-            <div className="pillar">
-              <div className="pillar-icon">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                  <circle cx="9" cy="7" r="3"/><circle cx="15" cy="7" r="3"/>
-                  <path d="M3 21v-2a4 4 0 014-4h2m6 0h2a4 4 0 014 4v2"/>
-                </svg>
-              </div>
-              <h5>Collaborate</h5>
-              <p>We work together to achieve more.</p>
-            </div>
-            <div className="pillar">
-              <div className="pillar-icon">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                  <path d="M9 21h6m-3-3v3m-4-9a4 4 0 118 0c0 1.5-.8 2.5-2 3.5-.4.3-.7.7-.9 1.1a.5.5 0 01-.45.4h-1.3a.5.5 0 01-.45-.4c-.2-.4-.5-.8-.9-1.1C10.8 14.5 10 13.5 10 12z"/>
-                </svg>
-              </div>
-              <h5>Innovate</h5>
-              <p>We turn ideas into impactful solutions.</p>
-            </div>
-            <div className="pillar">
-              <div className="pillar-icon">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                  <path d="M12 2l2.09 6.26L20 9.27l-5 3.87L16.18 20 12 16.77 7.82 20 9 13.14 4 9.27l5.91-1.01z"/>
-                </svg>
-              </div>
-              <h5>Inspire</h5>
-              <p>We inspire and grow together as one.</p>
-            </div>
-          </div>
+      <div className="container">
+        <div className="section-header">
+          <span className="section-tag">ABOUT US</span>
+          <h2 className="section-title">Who We Are</h2>
         </div>
-        <div className="about-visual">
-          <div className="placeholder-box about-placeholder">
-            <PlaceholderIcon />
-            <span>About Image</span>
+        <div className="about-content">
+          <div className="about-text-block">
+            <p>
+              Tech Crew is a student-driven technical club focused on learning, innovation and real-world skills.
+              We create opportunities to explore technology, share knowledge and build solutions together.
+              Our mission is to bridge the gap between classroom learning and industry expectations.
+            </p>
+          </div>
+          <div className="about-pillars">
+            {pillars.map((p, i) => {
+              const IconComp = p.icon
+              return (
+                <div className="pillar-card" key={i}>
+                  <div className="pillar-glow" />
+                  <div className="pillar-icon-wrap">
+                    <IconComp />
+                  </div>
+                  <h5>{p.title}</h5>
+                  <p>{p.desc}</p>
+                </div>
+              )
+            })}
           </div>
         </div>
       </div>
@@ -288,84 +511,178 @@ function About() {
   )
 }
 
-/* ===== MEMBERS ===== */
-function Members() {
+/* ===== MEMBERS SECTION ===== */
+function EvolvedMembersSection() {
+  const [selectedMember, setSelectedMember] = useState<Member | null>(null)
+
+  const getInitials = (name: string) => {
+    const parts = name.trim().split(' ')
+    return parts.length >= 2 ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase() : name.substring(0, 2).toUpperCase()
+  }
+
+  const tierConfig = {
+    leadership: {
+      color: '#00d4ff',
+      glow: 'rgba(0, 212, 255, 0.4)',
+      bg: 'rgba(0, 212, 255, 0.12)',
+      label: 'Leadership',
+    },
+    core: {
+      color: '#a78bfa',
+      glow: 'rgba(167, 139, 250, 0.4)',
+      bg: 'rgba(167, 139, 250, 0.12)',
+      label: 'Core Team',
+    },
+    executive: {
+      color: '#10b981',
+      glow: 'rgba(16, 185, 129, 0.4)',
+      bg: 'rgba(16, 185, 129, 0.12)',
+      label: 'Executive',
+    },
+  }
+
+  const tierOrder = ['leadership', 'core', 'executive'] as const
+
+  const renderMemberPhoto = (member: Member) =>
+    member.photo ? (
+      <img src={member.photo} alt={member.name} />
+    ) : (
+      getInitials(member.name)
+    )
+
+  if (selectedMember) {
+    const config = tierConfig[selectedMember.tier]
+    return (
+      <section className="members reveal" id="members">
+        <div className="container">
+          <button className="profile-back-btn" onClick={() => setSelectedMember(null)}>
+            <span aria-hidden="true">←</span> All members
+          </button>
+          <div className="member-profile-view">
+            <div
+              className="profile-photo"
+              style={{ '--tier-color': config.color, '--tier-bg': config.bg } as React.CSSProperties}
+            >
+              {renderMemberPhoto(selectedMember)}
+            </div>
+            <span
+              className="profile-tier-badge"
+              style={{ color: config.color, background: config.bg, borderColor: config.color }}
+            >
+              {config.label}
+            </span>
+            <h3 className="profile-name">{selectedMember.name}</h3>
+            <p className="profile-role" style={{ color: config.color }}>
+              {selectedMember.designation}
+            </p>
+            <div className="profile-info">
+              <div className="info-chip">
+                <span className="chip-label">Department / Class</span>
+                <span className="chip-value">{selectedMember.class}</span>
+              </div>
+              <div className="info-chip">
+                <span className="chip-label">Club Membership</span>
+                <span className="chip-value">Member #{selectedMember.id}</span>
+              </div>
+              <div className="info-chip">
+                <span className="chip-label">Status</span>
+                <span className="chip-value status-active">Active</span>
+              </div>
+            </div>
+            <div className="profile-quote">
+              <p>“Driving technical innovation and collaborative learning in Tech Crew.”</p>
+            </div>
+          </div>
+        </div>
+      </section>
+    )
+  }
+
   return (
     <section className="members reveal" id="members">
       <div className="container">
-        <h2 className="section-label">MEMBERS</h2>
-        <div className="members-placeholder">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="members-icon">
-            <circle cx="9" cy="7" r="3"/><circle cx="15" cy="7" r="3"/>
-            <path d="M3 21v-2a4 4 0 014-4h2m6 0h2a4 4 0 014 4v2"/>
-          </svg>
-          <p>Members section coming soon!</p>
+        <div className="section-header">
+          <span className="section-tag">CORE CREW ROSTER</span>
+          <h2 className="section-title">Meet Our Team</h2>
+        </div>
+
+        <div className="member-groups">
+          {tierOrder.map(tier => {
+            const config = tierConfig[tier]
+            const list = membersData.filter(m => m.tier === tier)
+            return (
+              <div key={tier} className="member-group">
+                <div className="member-group-header">
+                  <span
+                    className="member-group-badge"
+                    style={{ color: config.color, background: config.bg, borderColor: config.color }}
+                  >
+                    {config.label} ({list.length})
+                  </span>
+                  <span className="member-swipe-hint">
+                    swipe <span aria-hidden="true">→</span>
+                  </span>
+                </div>
+                <div
+                  className="member-row"
+                  onScroll={e => {
+                    const el = e.currentTarget
+                    const atEnd = el.scrollLeft + el.clientWidth >= el.scrollWidth - 4
+                    el.classList.toggle('row-end', atEnd)
+                  }}
+                >
+                  {list.map(member => (
+                    <button
+                      key={member.id}
+                      className="member-card"
+                      onClick={() => setSelectedMember(member)}
+                      style={{ '--tier-color': config.color, '--tier-bg': config.bg } as React.CSSProperties}
+                    >
+                      <span className="member-photo">{renderMemberPhoto(member)}</span>
+                      <span className="member-name">{member.name}</span>
+                      <span className="member-role">{member.designation}</span>
+                      <span className="member-class">{member.class}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )
+          })}
         </div>
       </div>
     </section>
   )
 }
-
-/* ===== EVENTS ===== */
-const eventTypes = [
-  {
-    title: 'Workshops',
-    desc: 'Hands-on sessions to learn and build.',
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-        <rect x="3" y="4" width="18" height="18" rx="2"/>
-        <path d="M16 2v4M8 2v4M3 10h18M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01"/>
-      </svg>
-    ),
-  },
-  {
-    title: 'Hackathons',
-    desc: 'Code. Innovate. Compete. Win.',
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-        <path d="M16 18l6-6-6-6M8 6l-6 6 6 6"/>
-      </svg>
-    ),
-  },
-  {
-    title: 'Seminars',
-    desc: 'Learn from experts and industry leaders.',
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-        <path d="M12 1v4m0 14v4M4.22 4.22l2.83 2.83m9.9 9.9l2.83 2.83M1 12h4m14 0h4M4.22 19.78l2.83-2.83m9.9-9.9l2.83-2.83"/>
-        <circle cx="12" cy="12" r="4"/>
-      </svg>
-    ),
-  },
-  {
-    title: 'Tech Meets',
-    desc: 'Connect, collaborate and create together.',
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-        <circle cx="9" cy="7" r="3"/><circle cx="15" cy="7" r="3"/>
-        <path d="M3 21v-2a4 4 0 014-4h10a4 4 0 014 4v2"/>
-      </svg>
-    ),
-  },
-]
-
+/* ===== EVENTS SECTION ===== */
 function Events() {
+  const eventTypesList = [
+    { title: 'Workshops', desc: 'Hands-on sessions to learn modern frameworks and tools.', icon: Icons.Workshops },
+    { title: 'Hackathons', desc: 'Code. Innovate. Compete. Build solutions overnight.', icon: Icons.Hackathons },
+    { title: 'Seminars', desc: 'Learn directly from industry leaders and experts.', icon: Icons.Seminars },
+    { title: 'Tech Meets', desc: 'Connect, collaborate and expand your network.', icon: Icons.TechMeets },
+  ]
+
   return (
     <section className="events reveal" id="events">
       <div className="container">
-        <h2 className="section-label">EVENTS</h2>
-        <div className="events-grid">
-          {eventTypes.map((et, i) => (
-            <div className="event-type-card" key={i}>
-              <div className="event-type-icon">{et.icon}</div>
-              <h4>{et.title}</h4>
-              <p>{et.desc}</p>
-              <a href="#" className="read-more">Explore →</a>
-            </div>
-          ))}
+        <div className="section-header">
+          <span className="section-tag">ACTIVITIES</span>
+          <h2 className="section-title">What We Do</h2>
         </div>
-        <div className="center">
-          <a href="#" className="btn btn-outline">View All Events →</a>
+        <div className="events-grid">
+          {eventTypesList.map((et, i) => {
+            const IconComp = et.icon
+            return (
+              <div className="event-type-card-glass" key={i}>
+                <div className="event-type-glow" />
+                <div className="event-type-icon-wrap">
+                  <IconComp />
+                </div>
+                <h4>{et.title}</h4>
+                <p>{et.desc}</p>
+              </div>
+            )
+          })}
         </div>
       </div>
     </section>
@@ -376,19 +693,20 @@ function Events() {
 function Feedback() {
   return (
     <section className="feedback reveal" id="feedback">
-      <div className="container feedback-bar">
-        <div className="feedback-left">
-          <div className="feedback-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-              <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
-            </svg>
+      <div className="container">
+        <div className="feedback-glass">
+          <div className="feedback-glow" />
+          <div className="feedback-content">
+            <div className="feedback-icon-wrap">
+              <Icons.Message />
+            </div>
+            <div>
+              <h3>We Value Your Feedback</h3>
+              <p>Your feedback helps us improve and organize better events for you.</p>
+            </div>
           </div>
-          <div>
-            <h3>We Value Your Feedback</h3>
-            <p>Your feedback helps us improve and organize better events for you.</p>
-          </div>
+          <a href="#" className="btn btn-glow">Share Feedback</a>
         </div>
-        <a href="#" className="btn btn-primary">Share Your Feedback</a>
       </div>
     </section>
   )
@@ -407,13 +725,13 @@ function Footer() {
           <p>Empowering minds through technology and innovation.</p>
           <div className="social-links">
             <a href="https://www.instagram.com/tech_crew_vcet?igsh=b25qazRza3JlaGph" target="_blank" rel="noopener noreferrer" aria-label="Instagram">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="5"/><circle cx="17.5" cy="6.5" r="1.5"/></svg>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><rect x="2" y="2" width="20" height="20" rx="5" /><circle cx="12" cy="12" r="5" /><circle cx="17.5" cy="6.5" r="1.5" /></svg>
             </a>
             <a href="https://www.linkedin.com/company/techcrew-vcet/" target="_blank" rel="noopener noreferrer" aria-label="LinkedIn">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M16 8a6 6 0 016 6v7h-4v-7a2 2 0 00-4 0v7h-4v-7a6 6 0 016-6zM2 9h4v12H2zM4 6a2 2 0 100-4 2 2 0 000 4z"/></svg>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M16 8a6 6 0 016 6v7h-4v-7a2 2 0 00-4 0v7h-4v-7a6 6 0 016-6zM2 9h4v12H2zM4 6a2 2 0 100-4 2 2 0 000 4z" /></svg>
             </a>
             <a href="https://github.com/clubtechcrew/" target="_blank" rel="noopener noreferrer" aria-label="GitHub">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M12 2C6.48 2 2 6.48 2 12c0 4.42 2.87 8.17 6.84 9.5.5.08.66-.23.66-.5v-1.69c-2.77.6-3.36-1.34-3.36-1.34-.46-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.6.07-.6 1 .07 1.53 1.03 1.53 1.03.87 1.52 2.34 1.07 2.91.83.09-.65.35-1.09.63-1.34-2.22-.25-4.55-1.11-4.55-4.92 0-1.11.38-2 1.03-2.71-.1-.25-.45-1.29.1-2.64 0 0 .84-.27 2.75 1.02.79-.22 1.65-.33 2.5-.33.85 0 1.71.11 2.5.33 1.91-1.29 2.75-1.02 2.75-1.02.55 1.35.2 2.39.1 2.64.65.71 1.03 1.6 1.03 2.71 0 3.82-2.34 4.66-4.57 4.91.36.31.69.92.69 1.85V21.5c0 .27.16.59.67.5C19.14 20.16 22 16.42 22 12c0-5.52-4.48-10-10-10z"/></svg>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M12 2C6.48 2 2 6.48 2 12c0 4.42 2.87 8.17 6.84 9.5.5.08.66-.23.66-.5v-1.69c-2.77.6-3.36-1.34-3.36-1.34-.46-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.6.07-.6 1 .07 1.53 1.03 1.53 1.03.87 1.52 2.34 1.07 2.91.83.09-.65.35-1.09.63-1.34-2.22-.25-4.55-1.11-4.55-4.92 0-1.11.38-2 1.03-2.71-.1-.25-.45-1.29.1-2.64 0 0 .84-.27 2.75 1.02.79-.22 1.65-.33 2.5-.33.85 0 1.71.11 2.5.33 1.91-1.29 2.75-1.02 2.75-1.02.55 1.35.2 2.39.1 2.64.65.71 1.03 1.6 1.03 2.71 0 3.82-2.34 4.66-4.57 4.91.36.31.69.92.69 1.85V21.5c0 .27.16.59.67.5C19.14 20.16 22 16.42 22 12c0-5.52-4.48-10-10-10z" /></svg>
             </a>
           </div>
         </div>
@@ -421,40 +739,40 @@ function Footer() {
           <h4>QUICK LINKS</h4>
           <ul>
             <li><a href="#motto">Motto</a></li>
-            <li><a href="#upcoming-event">Upcoming Event</a></li>
-            <li><a href="#tech-blog">Tech Blog</a></li>
+            <li><a href="#upcoming-event">Events</a></li>
+            <li><a href="#tech-blog">Blog</a></li>
+            <li><a href="#about">About</a></li>
           </ul>
         </div>
         <div className="footer-links">
-          <h4>QUICK LINKS</h4>
+          <h4>EXPLORE</h4>
           <ul>
-            <li><a href="#about">About Us</a></li>
-            <li><a href="#members">Members</a></li>
-            <li><a href="#events">Events</a></li>
+            <li><a href="#members">Team</a></li>
+            <li><a href="#events">Activities</a></li>
             <li><a href="#feedback">Feedback</a></li>
           </ul>
         </div>
         <div className="footer-contact">
           <h4>CONTACT US</h4>
           <ul>
-            <li>✉ techcrew@abccollege.edu.in</li>
+            <li>✉ techcrew@vcet.ac.in</li>
             <li>📞 +91 98765 43210</li>
-            <li>📍 ABC College of Engineering, Main Road, City - 641001, Tamil Nadu, India.</li>
+            <li>📍 Velammal College of Engineering, Chennai, Tamil Nadu</li>
           </ul>
         </div>
         <div className="footer-newsletter">
           <h4>STAY CONNECTED</h4>
-          <p>Subscribe to get updates about our events and blog.</p>
+          <p>Subscribe for event updates and tech insights.</p>
           <form className="newsletter-form" onSubmit={e => e.preventDefault()}>
             <input type="email" placeholder="Enter your email" required />
             <button type="submit" aria-label="Subscribe">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" /></svg>
             </button>
           </form>
         </div>
       </div>
       <div className="footer-bottom">
-        <p>© 2026 Tech Crew. All rights reserved.</p>
+        <p>© 2026 Tech Crew · VCET · All rights reserved.</p>
       </div>
     </footer>
   )
@@ -473,10 +791,7 @@ function App() {
       },
       { threshold: 0.1 }
     )
-
-    const elements = document.querySelectorAll('.reveal')
-    elements.forEach(el => observer.observe(el))
-
+    document.querySelectorAll('.reveal').forEach(el => observer.observe(el))
     return () => observer.disconnect()
   }, [])
 
@@ -488,7 +803,7 @@ function App() {
       <UpcomingEvent />
       <TechBlog />
       <About />
-      <Members />
+      <EvolvedMembersSection />
       <Events />
       <Feedback />
       <Footer />
