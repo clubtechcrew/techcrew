@@ -19,7 +19,6 @@ const membersData: Member[] = [
   { id: 6, name: 'Swathi S', class: '24CS5C', designation: 'Associate Admin', tier: 'core', photo: '/members/swathi.png' },
   { id: 7, name: 'Kaarthika M', class: '24CS5B', designation: 'Joint Tech Lead', tier: 'core', photo: '/members/kaarthika.png' },
   { id: 8, name: 'Gokula Prasath R', class: '24CS5A', designation: 'Organizer', tier: 'core', photo: '/members/gokul.png' },
-  { id: 9, name: 'Jeishree V', class: '24CS5A', designation: 'Content Creator', tier: 'core', photo: '/members/jeishree.png' },
   { id: 10, name: 'Sowmiya M', class: '24CS5C', designation: 'Designer', tier: 'core', photo: '/members/sowmiya.png' },
   { id: 12, name: 'Subasri S', class: '24CS5C', designation: 'Chief Innovator', tier: 'core', photo: '/members/subasri.png' },
   { id: 13, name: 'Vikash K', class: '24CS5C', designation: 'Joint Treasurer', tier: 'core', photo: '/members/vikash.png' },
@@ -34,6 +33,31 @@ const membersData: Member[] = [
   { id: 22, name: 'Yohidha V S', class: '25CS3C', designation: 'Executive Member', tier: 'executive', photo: '/members/yohidha.png' },
   { id: 23, name: 'Sabari K', class: '25CS3C', designation: 'Executive Member', tier: 'executive', photo: '/members/sabari.png' },
   { id: 24, name: 'Rizvan R', class: '25CS3C', designation: 'Executive Member', tier: 'executive', photo: '/members/rizvan.png' },
+]
+
+const getMember = (id: number) => membersData.find(m => m.id === id)
+
+const getInitials = (name: string) => {
+  const parts = name.trim().split(' ')
+  return parts.length >= 2 ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase() : name.substring(0, 2).toUpperCase()
+}
+
+/* ===== MENTORSHIP DATA ===== */
+interface Mentorship {
+  mentor: number
+  mentee: number
+}
+
+const mentorships: Mentorship[] = [
+  { mentor: 1, mentee: 24 },
+  { mentor: 6, mentee: 19 },
+  { mentor: 5, mentee: 16 },
+  { mentor: 8, mentee: 20 },
+  { mentor: 10, mentee: 17 },
+  { mentor: 3, mentee: 18 },
+  { mentor: 7, mentee: 22 },
+  { mentor: 4, mentee: 21 },
+  { mentor: 15, mentee: 23 },
 ]
 
 /* ===== EVENTS DATA ===== */
@@ -234,7 +258,7 @@ function Navbar() {
   useEffect(() => {
     const handleScroll = () => {
       setScrolled(window.scrollY > 20)
-      const sections = ['hero', 'motto', 'upcoming-event', 'tech-blog', 'about', 'members', 'events', 'feedback']
+      const sections = ['hero', 'motto', 'upcoming-event', 'tech-blog', 'about', 'members', 'mentorship', 'events', 'feedback']
       for (const id of [...sections].reverse()) {
         const el = document.getElementById(id)
         if (el && el.getBoundingClientRect().top <= 150) {
@@ -253,6 +277,7 @@ function Navbar() {
     { id: 'tech-blog', label: 'Blog' },
     { id: 'about', label: 'About' },
     { id: 'members', label: 'Team' },
+    { id: 'mentorship', label: 'Mentorship' },
     { id: 'events', label: 'Activities' },
     { id: 'feedback', label: 'Contact' },
   ]
@@ -515,11 +540,6 @@ function About() {
 function EvolvedMembersSection() {
   const [selectedMember, setSelectedMember] = useState<Member | null>(null)
 
-  const getInitials = (name: string) => {
-    const parts = name.trim().split(' ')
-    return parts.length >= 2 ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase() : name.substring(0, 2).toUpperCase()
-  }
-
   const tierConfig = {
     leadership: {
       color: '#00d4ff',
@@ -653,6 +673,51 @@ function EvolvedMembersSection() {
     </section>
   )
 }
+/* ===== MENTORSHIP SECTION ===== */
+function MentorshipSection() {
+  const renderAvatar = (member: Member, side: 'mentor' | 'junior') => (
+    <div className={`mentorship-avatar ${side}`}>
+      {member.photo ? <img src={member.photo} alt={member.name} /> : <span>{getInitials(member.name)}</span>}
+    </div>
+  )
+
+  const renderPair = (p: Mentorship) => {
+    const mentor = getMember(p.mentor)
+    const mentee = getMember(p.mentee)
+    if (!mentor || !mentee) return null
+    return (
+      <div className="mentorship-pair-row" key={p.mentee}>
+        <span className="mentorship-person">
+          {renderAvatar(mentor, 'mentor')}
+          <span className="mentorship-name">{mentor.name}</span>
+        </span>
+        <span className="mentorship-pair-arrow" aria-hidden="true">→</span>
+        <span className="mentorship-person">
+          <span className="mentorship-name">{mentee.name}</span>
+          {renderAvatar(mentee, 'junior')}
+        </span>
+      </div>
+    )
+  }
+
+  return (
+    <section className="mentorship reveal" id="mentorship">
+      <div className="container">
+        <div className="section-header">
+          <span className="section-tag">MENTORSHIP</span>
+          <h2 className="section-title">Senior to Junior Guidance</h2>
+          <p className="section-subtitle">Every junior is guided by a senior — to learn, help and grow together.</p>
+        </div>
+
+        <div className="mentorship-pairs">
+          {mentorships.slice(0, 5).map(renderPair)}
+          {mentorships.slice(5).map(renderPair)}
+        </div>
+      </div>
+    </section>
+  )
+}
+
 /* ===== EVENTS SECTION ===== */
 function Events() {
   const eventTypesList = [
@@ -748,6 +813,7 @@ function Footer() {
           <h4>EXPLORE</h4>
           <ul>
             <li><a href="#members">Team</a></li>
+            <li><a href="#mentorship">Mentorship</a></li>
             <li><a href="#events">Activities</a></li>
             <li><a href="#feedback">Feedback</a></li>
           </ul>
@@ -804,6 +870,7 @@ function App() {
       <TechBlog />
       <About />
       <EvolvedMembersSection />
+      <MentorshipSection />
       <Events />
       <Feedback />
       <Footer />
