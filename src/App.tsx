@@ -1,4 +1,21 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
+import {
+  DAY_LABELS,
+  MONTH_SHORT,
+  PROGRESS_WEEKS,
+  toISODate,
+  todayStart,
+  startOfWeek,
+  startOfMonth,
+  addDays,
+  addMonths,
+  fmtDayLong,
+  fmtRange,
+  buildProgressWeek,
+  buildMonthDays,
+} from './lib/progress'
+import { fetchSchedule, fetchUpdates, isSupabaseConfigured } from './lib/supabase'
+import type { ProgressDay, ProgressUpdate } from './lib/progress'
 
 /* ===== MEMBERS DATA ===== */
 interface Member {
@@ -279,6 +296,7 @@ function Navbar() {
     { id: 'members', label: 'Team' },
     { id: 'mentorship', label: 'Mentorship' },
     { id: 'events', label: 'Activities' },
+    { id: 'updates', label: 'Updates' },
     { id: 'feedback', label: 'Contact' },
   ]
 
@@ -718,6 +736,458 @@ function MentorshipSection() {
   )
 }
 
+/* ===== PROGRESS DATA HOOK ===== */
+function useProgressData() {
+  const [data, setData] = useState<{
+    schedule: Record<number, number[]>
+    members: { id: number; name: string }[]
+    updates: Map<string, { title: string; content: string }>
+  }>({ schedule: {}, members: [], updates: new Map() })
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  const reload = useCallback(async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      const rows = await fetchSchedule()
+      const schedule: Record<number, number[]> = {}
+      rows.forEach(m => {
+        ;(schedule[m.scheduled_day] ??= []).push(m.id)
+      })
+      const now = todayStart()
+      const from = addDays(startOfWeek(now), -(PROGRESS_WEEKS - 1) * 7)
+      const to = addDays(startOfWeek(now), 6)
+      const updateRows = await fetchUpdates(toISODate(from), toISODate(to))
+      const updates = new Map<string, { title: string; content: string }>()
+      updateRows.forEach(r => {
+        updates.set(`${r.member_id}:${r.posted_on}`, { title: r.title, content: r.content })
+      })
+      setData({
+        schedule,
+        members: rows.map(m => ({ id: m.id, name: m.name })),
+        updates,
+      })
+      setLoading(false)
+    } catch (err) {
+      setLoading(false)
+      setError(err instanceof Error ? err.message : String(err))
+    }
+  }, [])
+
+  useEffect(() => {
+    reload()
+  }, [reload])
+
+  return { ...data, loading, error, reload }
+}
+
+const progressContext = (schedule: Record<number, number[]>, updates: Map<string, { title: string; content: string }>) => ({
+  schedule,
+  updates,
+})
+
+/* ===== WEEKLY PROGRESS ===== */
+function WeeklyProgress() {
+  const { schedule, updates, loading, error, reload } = useProgressData()
+  const ctx = progressContext(schedule, updates)
+  const nowDay = (new Date().getDay() + 6) % 7
+  const goUpdates = () => {
+    window.location.hash = '#updates'
+  }
+
+  if (loading) {
+    return (
+      <section className="weekly-progress reveal visible" id="weekly-progress">
+        <div className="container">
+          <div className="section-header">
+            <span className="section-tag">WEEKLY PROGRESS</span>
+            <h2 className="section-title">Loading updates…</h2>
+          </div>
+          <div className="progress-state">
+            <div className="progress-spinner" />
+            <p>Fetching this week's updates from the database.</p>
+          </div>
+        </div>
+      </section>
+    )
+  }
+
+  if (error) {
+    return (
+      <section className="weekly-progress reveal visible" id="weekly-progress">
+        <div className="container">
+          <div className="section-header">
+            <span className="section-tag">WEEKLY PROGRESS</span>
+            <h2 className="section-title">Couldn't load updates</h2>
+          </div>
+          <div className="progress-state">
+            <p>{isSupabaseConfigured ? error : 'Supabase is not configured. Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to .env.local.'}</p>
+            <button className="btn btn-glass" onClick={reload}>
+              <span>Retry</span>
+            </button>
+          </div>
+        </div>
+      </section>
+    )
+  }
+
+  const current = buildProgressWeek(startOfWeek(todayStart()), ctx)
+  const todayDay = current.days[nowDay]
+  const postedCount = current.days.reduce((n, d) => n + d.updates.filter(u => u.posted).length, 0)
+  const totalCount = current.days.reduce((n, d) => n + d.updates.length, 0)
+
+  return (
+    <section className="weekly-progress reveal visible" id="weekly-progress">
+      <div className="container">
+        <div className="section-header">
+          <span className="section-tag">WEEKLY PROGRESS</span>
+          <h2 className="section-title">
+            What We're <span className="gradient-text">Building</span> This Week
+          </h2>
+          <p className="section-subtitle">
+            Every executive member shares a small win each week. {postedCount} of {totalCount} updates posted so far.
+          </p>
+        </div>
+
+        <div
+          className="progress-spotlight"
+          role="button"
+          tabIndex={0}
+          onClick={goUpdates}
+          onKeyDown={e => {
+            if (e.key === 'Enter' || e.key === ' ') goUpdates()
+          }}
+        >
+          <div className="spotlight-head">
+            <span className="spotlight-day">TODAY · {DAY_LABELS[nowDay]}</span>
+            <span className="spotlight-date">{fmtDayLong(todayDay.date)}</span>
+          </div>
+          {todayDay.updates.length === 0 && (
+            <p className="spotlight-post-text">No one is scheduled to post today.</p>
+          )}
+          {todayDay.updates.map(u => {
+            const member = getMember(u.memberId)
+            if (!member) return null
+            return (
+              <div className="spotlight-post" key={u.memberId}>
+                <span className={`progress-avatar${u.posted ? '' : ' pending'}`}>
+                  {member.photo ? <img src={member.photo} alt={member.name} /> : <span>{getInitials(member.name)}</span>}
+                </span>
+                <div className="spotlight-post-body">
+                  <span className="spotlight-post-name">{member.name}</span>
+                  {u.posted ? (
+                    <p className="spotlight-post-text">“{u.content}”</p>
+                  ) : (
+                    <p className="spotlight-post-text pending">Update coming later today — {u.title}.</p>
+                  )}
+                </div>
+                <span className={`status-badge${u.posted ? '' : ' pending'}`}>{u.posted ? 'Posted' : 'Pending'}</span>
+              </div>
+            )
+          })}
+          <span className="spotlight-cta">
+            View full update
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M5 12h14m-7-7l7 7-7 7" /></svg>
+          </span>
+        </div>
+
+        <div className="progress-actions">
+          <a href="#updates" className="btn btn-glow">
+            <span>View Full Updates</span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M5 12h14m-7-7l7 7-7 7" /></svg>
+          </a>
+        </div>
+      </div>
+    </section>
+  )
+}
+
+/* ===== UPDATES FULL PAGE ===== */
+type UpdateView = 'week' | 'month' | 'year'
+
+function UpdatesPage() {
+  const [view, setView] = useState<UpdateView>('week')
+  const [weekOffset, setWeekOffset] = useState(0)
+  const [monthOffset, setMonthOffset] = useState(0)
+  const [yearOffset, setYearOffset] = useState(0)
+  const [personId, setPersonId] = useState<number | 'all'>('all')
+  const [expandedPosts, setExpandedPosts] = useState<Set<string>>(new Set())
+  const [schedule, setSchedule] = useState<Record<number, number[]>>({})
+  const [updates, setUpdates] = useState<Map<string, { title: string; content: string }>>(new Map())
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  const now = todayStart()
+
+  const loadData = useCallback(async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      const rows = await fetchSchedule()
+      const sched: Record<number, number[]> = {}
+      rows.forEach(m => {
+        ;(sched[m.scheduled_day] ??= []).push(m.id)
+      })
+      const today = todayStart()
+      const from = addDays(startOfWeek(today), -(PROGRESS_WEEKS - 1) * 7)
+      const updateRows = await fetchUpdates(toISODate(from), toISODate(today))
+      const map = new Map<string, { title: string; content: string }>()
+      updateRows.forEach(r => {
+        map.set(`${r.member_id}:${r.posted_on}`, { title: r.title, content: r.content })
+      })
+      setSchedule(sched)
+      setUpdates(map)
+      setLoading(false)
+    } catch (err) {
+      setLoading(false)
+      setError(err instanceof Error ? err.message : String(err))
+    }
+  }, [])
+
+  useEffect(() => {
+    loadData()
+  }, [loadData])
+
+  const ctx = progressContext(schedule, updates)
+  const execMembers = membersData.filter(m => m.tier === 'executive')
+
+  const targetMonth = addMonths(startOfMonth(now), -monthOffset)
+  const week = buildProgressWeek(addDays(startOfWeek(now), -weekOffset * 7), ctx)
+  const monthDays = buildMonthDays(targetMonth, ctx)
+  const isCurrent = view === 'week' ? weekOffset === 0 : view === 'month' ? monthOffset === 0 : yearOffset === 0
+  const periodLabel = view === 'week' ? fmtRange(week) : view === 'month' ? `${MONTH_SHORT[targetMonth.getMonth()]} ${targetMonth.getFullYear()}` : `${now.getFullYear() - yearOffset}`
+  const periodTag = view === 'week' ? 'THIS WEEK' : view === 'month' ? 'THIS MONTH' : 'THIS YEAR'
+
+  const goHome = () => {
+    window.location.hash = '#weekly-progress'
+  }
+  const goTop = () => {
+    window.location.hash = ''
+  }
+  const togglePost = (key: string) => {
+    setExpandedPosts(prev => {
+      const next = new Set(prev)
+      if (next.has(key)) next.delete(key)
+      else next.add(key)
+      return next
+    })
+  }
+
+  const shownUpdates = (updatesList: ProgressUpdate[]) =>
+    personId === 'all' ? updatesList : updatesList.filter(u => u.memberId === personId)
+
+  const navigate = (dir: number) => {
+    if (view === 'week') setWeekOffset(o => Math.max(0, Math.min(PROGRESS_WEEKS - 1, o + dir)))
+    else if (view === 'month') setMonthOffset(o => Math.max(0, Math.min(13, o + dir)))
+    else setYearOffset(o => Math.max(0, Math.min(1, o + dir)))
+  }
+  const goCurrent = () => {
+    if (view === 'week') setWeekOffset(0)
+    else if (view === 'month') setMonthOffset(0)
+    else setYearOffset(0)
+  }
+
+  const canPrev = view === 'week' ? weekOffset < PROGRESS_WEEKS - 1 : view === 'month' ? monthOffset < 13 : yearOffset < 1
+  const canNext = view === 'week' ? weekOffset > 0 : view === 'month' ? monthOffset > 0 : yearOffset > 0
+
+  const renderPost = (u: ProgressUpdate, d: ProgressDay) => {
+    const member = getMember(u.memberId)
+    if (!member) return null
+    const postKey = `${d.date.getTime()}-${u.memberId}`
+    const postOpen = expandedPosts.has(postKey)
+    const isLong = u.posted && u.content.length > 170
+    return (
+      <div className={`update-post${u.posted ? '' : ' pending'}`} key={u.memberId}>
+        <span className="progress-avatar">
+          {member.photo ? <img src={member.photo} alt={member.name} /> : <span>{getInitials(member.name)}</span>}
+        </span>
+        <div className="update-post-body">
+          <div className="update-post-top">
+            <span className="update-post-name">{member.name}</span>
+            <span className={`status-badge${u.posted ? '' : ' pending'}`}>{u.posted ? 'Posted' : 'Pending'}</span>
+          </div>
+          <p className="update-post-title">{u.title}</p>
+          <p className={`update-post-text${postOpen ? ' open' : ''}`}>{u.content}</p>
+          {isLong && (
+            <button className={`update-post-toggle${postOpen ? ' open' : ''}`} onClick={() => togglePost(postKey)}>
+              <span>{postOpen ? 'Show less' : 'Show more'}</span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+          )}
+        </div>
+      </div>
+    )
+  }
+
+  const renderDay = (d: ProgressDay) => {
+    const shown = shownUpdates(d.updates)
+    if (shown.length === 0) return null
+    const isToday = d.date.getTime() === now.getTime()
+    return (
+      <div className={`update-day${isToday ? ' today' : ''}`} key={d.date.getTime()}>
+        <div className="update-day-head">
+          <span className="update-day-label">{DAY_LABELS[d.day]}</span>
+          <span className="update-day-date">{fmtDayLong(d.date)}</span>
+        </div>
+        {shown.map(u => renderPost(u, d))}
+      </div>
+    )
+  }
+
+  const shownCount = (days: ProgressDay[]) => days.flatMap(d => shownUpdates(d.updates))
+
+  const yearMonths = (() => {
+    const y = now.getFullYear() - yearOffset
+    const out: { month: number; updates: number; members: number }[] = []
+    for (let m = 0; m < 12; m++) {
+      const days = buildMonthDays(new Date(y, m, 1), ctx)
+      if (days.length === 0) continue
+      const shown = days.flatMap(d => shownUpdates(d.updates))
+      out.push({
+        month: m,
+        updates: shown.length,
+        members: personId === 'all' ? new Set(shown.map(u => u.memberId)).size : shown.length ? 1 : 0,
+      })
+    }
+    return out
+  })()
+
+  const jumpToMonth = (m: number) => {
+    const y = now.getFullYear() - yearOffset
+    const target = y * 12 + m
+    const current = now.getFullYear() * 12 + now.getMonth()
+    setMonthOffset(Math.max(0, current - target))
+    setView('month')
+  }
+
+  return (
+    <div className="updates-page">
+      <header className="updates-topbar">
+        <div className="container">
+          <a href="#" className="nav-logo" onClick={goTop}>
+            <img src="/logo.png" alt="Tech Crew Logo" />
+            <span>TECH CREW</span>
+          </a>
+          <button className="updates-back" onClick={goHome}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 12H5m7-7l-7 7 7 7" /></svg>
+            Back to Home
+          </button>
+        </div>
+      </header>
+
+      <main className="container updates-main">
+        <div className="section-header">
+          <span className="section-tag">WEEKLY PROGRESS</span>
+          <h1 className="section-title">
+            Updates &amp; <span className="gradient-text">History</span>
+          </h1>
+          <p className="section-subtitle">
+            Every executive member posts a small win each week. Browse by week, month or year — or filter a single member.
+          </p>
+        </div>
+
+        {loading && (
+          <div className="progress-state">
+            <div className="progress-spinner" />
+            <p>Loading updates from the database…</p>
+          </div>
+        )}
+
+        {error && (
+          <div className="progress-state">
+            <p>{isSupabaseConfigured ? error : 'Supabase is not configured. Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to .env.local.'}</p>
+            <button className="btn btn-glass" onClick={loadData}>
+              <span>Retry</span>
+            </button>
+          </div>
+        )}
+
+        {!loading && !error && (
+          <>
+            <div className="updates-filter">
+              <div className="filter-row">
+                <div className="filter-tabs">
+                  {(['week', 'month', 'year'] as const).map(v => (
+                    <button key={v} className={`filter-tab${view === v ? ' active' : ''}`} onClick={() => setView(v)}>
+                      {v === 'week' ? 'Week' : v === 'month' ? 'Month' : 'Year'}
+                    </button>
+                  ))}
+                </div>
+                <label className="filter-person">
+                  <span className="filter-person-label">Member</span>
+                  <select
+                    value={personId}
+                    onChange={e => setPersonId(e.target.value === 'all' ? 'all' : Number(e.target.value))}
+                  >
+                    <option value="all">All members</option>
+                    {execMembers.map(m => (
+                      <option key={m.id} value={m.id}>{m.name}</option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+              <div className="period-nav">
+                <button className="period-btn" onClick={() => navigate(1)} disabled={!canPrev} aria-label="Previous period">‹</button>
+                <div className="period-label">
+                  {isCurrent && <span className="period-tag">{periodTag}</span>}
+                  <span className="period-text">{periodLabel}</span>
+                </div>
+                <button className="period-btn" onClick={() => navigate(-1)} disabled={!canNext} aria-label="Next period">›</button>
+                <button className="period-now" onClick={goCurrent}>Now</button>
+              </div>
+            </div>
+
+            <div className="updates-list">
+              {view === 'week' && (
+                <div className="update-week open">
+                  <div className="update-week-head">
+                    <div className="update-week-title">
+                      <span className={`update-week-tag${weekOffset === 0 ? ' current' : ''}`}>{weekOffset === 0 ? 'THIS WEEK' : 'PAST WEEK'}</span>
+                      <span className="update-week-range">{fmtRange(week)}</span>
+                    </div>
+                    <span className="update-week-meta">{shownCount(week.days).filter(u => u.posted).length} of {shownCount(week.days).length} updates</span>
+                  </div>
+                  <div className="update-week-body">
+                    {week.days.map(renderDay)}
+                  </div>
+                </div>
+              )}
+
+              {view === 'month' && (
+                <div className="update-week open">
+                  <div className="update-week-head">
+                    <div className="update-week-title">
+                      <span className={`update-week-tag${monthOffset === 0 ? ' current' : ''}`}>{monthOffset === 0 ? 'THIS MONTH' : 'PAST MONTH'}</span>
+                      <span className="update-week-range">{periodLabel}</span>
+                    </div>
+                    <span className="update-week-meta">{shownCount(monthDays).filter(u => u.posted).length} of {shownCount(monthDays).length} updates</span>
+                  </div>
+                  <div className="update-week-body">
+                    {monthDays.map(renderDay)}
+                  </div>
+                </div>
+              )}
+
+              {view === 'year' && (
+                <div className="year-grid">
+                  {yearMonths.map(({ month, updates: monthUpdates, members: monthMembers }) => (
+                    <button className="month-card" key={month} onClick={() => jumpToMonth(month)}>
+                      <span className="month-card-name">{MONTH_SHORT[month]} {now.getFullYear() - yearOffset}</span>
+                      <span className="month-card-meta">
+                        {monthUpdates} {monthUpdates === 1 ? 'update' : 'updates'} · {monthMembers} {monthMembers === 1 ? 'member' : 'members'}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </>
+        )}
+      </main>
+    </div>
+  )
+}
 /* ===== EVENTS SECTION ===== */
 function Events() {
   const eventTypesList = [
@@ -814,6 +1284,7 @@ function Footer() {
           <ul>
             <li><a href="#members">Team</a></li>
             <li><a href="#mentorship">Mentorship</a></li>
+            <li><a href="#updates">Updates</a></li>
             <li><a href="#events">Activities</a></li>
             <li><a href="#feedback">Feedback</a></li>
           </ul>
@@ -846,7 +1317,16 @@ function Footer() {
 
 /* ===== MAIN APP ===== */
 function App() {
+  const [route, setRoute] = useState<'home' | 'updates'>(() => (window.location.hash === '#updates' ? 'updates' : 'home'))
+
   useEffect(() => {
+    const onHash = () => setRoute(window.location.hash === '#updates' ? 'updates' : 'home')
+    window.addEventListener('hashchange', onHash)
+    return () => window.removeEventListener('hashchange', onHash)
+  }, [])
+
+  useEffect(() => {
+    if (route !== 'home') return
     const observer = new IntersectionObserver(
       entries => {
         entries.forEach(entry => {
@@ -859,7 +1339,11 @@ function App() {
     )
     document.querySelectorAll('.reveal').forEach(el => observer.observe(el))
     return () => observer.disconnect()
-  }, [])
+  }, [route])
+
+  if (route === 'updates') {
+    return <UpdatesPage />
+  }
 
   return (
     <>
@@ -871,6 +1355,7 @@ function App() {
       <About />
       <EvolvedMembersSection />
       <MentorshipSection />
+      <WeeklyProgress />
       <Events />
       <Feedback />
       <Footer />
