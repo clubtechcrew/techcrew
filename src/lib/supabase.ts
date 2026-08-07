@@ -19,10 +19,17 @@ export interface DbUpdate {
 
 export const isSupabaseConfigured = Boolean(supabaseUrl && supabaseAnonKey)
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+export const supabase = isSupabaseConfigured ? createClient(supabaseUrl, supabaseAnonKey) : null
+
+const requireClient = () => {
+  if (!supabase) {
+    throw new Error('Supabase is not configured. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in the build environment.')
+  }
+  return supabase
+}
 
 export const fetchSchedule = async (): Promise<DbMember[]> => {
-  const { data, error } = await supabase
+  const { data, error } = await requireClient()
     .from('progress_members')
     .select('id, name, scheduled_day')
     .order('scheduled_day')
@@ -32,7 +39,7 @@ export const fetchSchedule = async (): Promise<DbMember[]> => {
 }
 
 export const fetchUpdates = async (from: string, to: string): Promise<DbUpdate[]> => {
-  const { data, error } = await supabase
+  const { data, error } = await requireClient()
     .from('weekly_updates')
     .select('id, member_id, posted_on, title, content')
     .gte('posted_on', from)
